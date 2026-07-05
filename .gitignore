@@ -88,3 +88,6 @@ temp/
 *.tmp
 *.bak
 *.orig
+# Local agent instructions
+/AGENTS.md
+/agents.md
