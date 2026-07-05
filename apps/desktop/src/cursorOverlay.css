@@ -1,0 +1,86 @@
+:root {
+  color: #f8f6ec;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+}
+
+.cursorWidget {
+  width: 178px;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid rgba(248, 246, 236, 0.32);
+  border-radius: 8px;
+  background: rgba(17, 21, 18, 0.9);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  user-select: none;
+}
+
+.cursorWidget-active {
+  border-color: rgba(95, 187, 117, 0.58);
+}
+
+.cursorTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid rgba(248, 246, 236, 0.14);
+  padding: 5px 8px 4px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.cursorTitle span {
+  font-size: 10px;
+  font-weight: 650;
+  color: rgba(248, 246, 236, 0.68);
+}
+
+.cursorCoords {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 8px;
+  line-height: 1.15;
+}
+
+.cursorCoords strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.cursorCoords span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: rgba(248, 246, 236, 0.68);
+}
+
+.cursorWarning {
+  margin: -2px 8px 0;
+  font-size: 9px;
+  color: #ffbd70;
+}

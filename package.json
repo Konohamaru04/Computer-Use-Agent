@@ -1,0 +1,11 @@
+{
+  "name": "computeruse-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "desktop:dev": "npm --prefix apps/desktop run tauri dev",
+    "desktop:build": "npm --prefix apps/desktop run tauri build",
+    "desktop:frontend": "npm --prefix apps/desktop run dev",
+    "desktop:typecheck": "npm --prefix apps/desktop run typecheck"
+  }
+}

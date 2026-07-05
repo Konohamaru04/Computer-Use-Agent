@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "cursor-marker",
+  "description": "ComputerUse cursor marker overlay permissions",
+  "windows": ["cursor-marker"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-cursor-position",
+    "core:window:allow-hide",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-set-position",
+    "core:window:allow-show"
+  ]
+}

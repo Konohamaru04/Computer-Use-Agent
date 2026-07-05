@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "widget",
+  "description": "ComputerUse status widget permissions",
+  "windows": ["widget"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-primary-monitor",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-position",
+    "core:window:allow-start-dragging"
+  ]
+}

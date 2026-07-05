@@ -1,0 +1,23 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default ComputerUse desktop permissions",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "python-computeruse-worker",
+          "cmd": "python",
+          "args": ["-m", "computeruse.worker"],
+          "sidecar": false
+        }
+      ]
+    },
+    "shell:allow-stdin-write",
+    "shell:allow-kill"
+  ]
+}
