@@ -10,6 +10,12 @@ ComputerUse is a local desktop-control agent for Ollama vision models. It captur
 
 It is built for the daily computer-use workflow: observe, plan, act, verify.
 
+## Video Preview
+
+[![ComputerUse demo video preview](https://img.youtube.com/vi/C7STRik0pFs/maxresdefault.jpg)](https://youtu.be/C7STRik0pFs)
+
+Watch the demo: [ComputerUse local AI desktop agent](https://youtu.be/C7STRik0pFs)
+
 ```text
 Natural-language task
   -> Tauri + React desktop runner
