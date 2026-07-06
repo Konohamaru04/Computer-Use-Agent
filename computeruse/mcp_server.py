@@ -29,7 +29,10 @@ MUTATING_ACTIONS = {
     ActionName.CLICK,
     ActionName.DOUBLE_CLICK,
     ActionName.RIGHT_CLICK,
+    ActionName.SCROLL,
+    ActionName.DRAG,
     ActionName.CLICK_ELEMENT,
+    ActionName.DOUBLE_CLICK_ELEMENT,
     ActionName.CLICK_TARGET,
     ActionName.TYPE_TEXT,
     ActionName.PRESS,
@@ -173,6 +176,11 @@ class ComputerUseMcpServer:
             "coordinate_rules": [
                 "Coordinate actions use absolute screenshot-pixel coordinates from the latest observe result.",
                 "Prefer click_element or click_target when a visible UIA element matches the target.",
+                "Single-click is the default for buttons, links, tabs, menus, text fields, browser controls, web results, and app navigation.",
+                "Use double_click_element only for desktop shortcuts/icons, files, folders, Explorer rows, or open/save dialog file rows that conventionally require double-click to open.",
+                "Do not double-click web links, buttons, tabs, YouTube thumbnails, checkboxes, text fields, or menu commands.",
+                "Use scroll with negative clicks to scroll down and positive clicks to scroll up.",
+                "Use drag for click-hold movement only: sliders, text selection, resize handles, drawing, scrollbar thumbs, or explicitly requested item/window movement.",
                 "Use dry_run=true to validate coordinate mapping without sending mouse or keyboard events.",
                 "Do not click hidden or guessed UI. Observe again when the screen changes.",
             ],
@@ -186,6 +194,9 @@ class ComputerUseMcpServer:
                 {"thought": "Open the visible search field.", "action": "click_target", "args": {"query": "Search", "role": "ComboBox"}, "done": False, "confidence": 0.8},
                 {"thought": "Type the query.", "action": "type_text", "args": {"text": "TWICE"}, "done": False, "confidence": 0.9},
                 {"thought": "Submit the search.", "action": "press", "args": {"key": "enter"}, "done": False, "confidence": 0.9},
+                {"thought": "Scroll down to see more results.", "action": "scroll", "args": {"clicks": -3}, "done": False, "confidence": 0.8},
+                {"thought": "Drag the slider thumb slightly right.", "action": "drag", "args": {"start_x": 420, "start_y": 500, "end_x": 520, "end_y": 500, "duration_ms": 500}, "done": False, "confidence": 0.75},
+                {"thought": "Open the desktop shortcut.", "action": "double_click_element", "args": {"element_id": "E4"}, "done": False, "confidence": 0.8},
                 {"thought": "The requested video is open.", "action": "done", "args": {"summary": "The requested video is open."}, "done": True, "confidence": 1.0},
             ],
         }
@@ -549,6 +560,8 @@ def _action_schema() -> JsonDict:
                 "description": (
                     "Action arguments. Coordinate actions require x,y screenshot pixels. "
                     "Element actions require element_id. Target actions require query and optional role. "
+                    "scroll requires clicks and optional x,y; negative clicks scroll down and positive clicks scroll up. "
+                    "drag requires start_x,start_y,end_x,end_y and optional duration_ms for click-hold-drag-release. "
                     "type_text requires text; press requires key; hotkey requires keys; wait requires ms; "
                     "done requires summary; fail requires reason."
                 ),

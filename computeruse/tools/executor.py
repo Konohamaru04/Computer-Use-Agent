@@ -25,8 +25,17 @@ POINTER_ACTIONS = {
     ActionName.MOVE,
 }
 
+OPTIONAL_POINTER_ACTIONS = {
+    ActionName.SCROLL,
+}
+
+DRAG_POINTER_ACTIONS = {
+    ActionName.DRAG,
+}
+
 ELEMENT_POINTER_ACTIONS = {
     ActionName.CLICK_ELEMENT,
+    ActionName.DOUBLE_CLICK_ELEMENT,
     ActionName.MOVE_ELEMENT,
 }
 
@@ -77,6 +86,35 @@ def execute_action(
             0,
         )
 
+    if dry_run and action.action in OPTIONAL_POINTER_ACTIONS:
+        mapped = _map_optional_pointer_args(action, screenshot)
+        if isinstance(mapped, ToolResult):
+            return mapped
+        if mapped is None:
+            return ToolResult(
+                True,
+                f"dry run: skipped {action.action.value} {action.args['clicks']} clicks at current pointer",
+                0,
+            )
+        return ToolResult(
+            True,
+            (
+                f"dry run: skipped {action.action.value} {action.args['clicks']} clicks; "
+                f"screenshot ({mapped.source_x}, {mapped.source_y}) maps to screen ({mapped.x}, {mapped.y})"
+            ),
+            0,
+        )
+
+    if dry_run and action.action in DRAG_POINTER_ACTIONS:
+        mapped_drag = _map_drag_args(action, screenshot)
+        if isinstance(mapped_drag, ToolResult):
+            return mapped_drag
+        return ToolResult(
+            True,
+            f"dry run: skipped drag; {_drag_mapping_message(mapped_drag)}",
+            0,
+        )
+
     if dry_run and action.action in TARGET_POINTER_ACTIONS:
         mapped = _map_target_args(action, elements, screenshot)
         if isinstance(mapped, ToolResult):
@@ -118,11 +156,39 @@ def execute_action(
             return mapped
         result = mouse.move(mapped.x, mapped.y)
         return _with_mapping(result.ok, result.message, result.execute_ms, mapped)
+    if action.action == ActionName.SCROLL:
+        mapped = _map_optional_pointer_args(action, screenshot)
+        if isinstance(mapped, ToolResult):
+            return mapped
+        if mapped is None:
+            result = mouse.scroll(action.args["clicks"])
+            return ToolResult(result.ok, result.message, result.execute_ms)
+        result = mouse.scroll(action.args["clicks"], mapped.x, mapped.y)
+        return _with_mapping(result.ok, result.message, result.execute_ms, mapped)
+    if action.action == ActionName.DRAG:
+        mapped_drag = _map_drag_args(action, screenshot)
+        if isinstance(mapped_drag, ToolResult):
+            return mapped_drag
+        result = mouse.drag(
+            mapped_drag.start.x,
+            mapped_drag.start.y,
+            mapped_drag.end.x,
+            mapped_drag.end.y,
+            action.args["duration_ms"],
+        )
+        message = f"{result.message}; {_drag_mapping_message(mapped_drag)}"
+        return ToolResult(result.ok, message, result.execute_ms)
     if action.action == ActionName.CLICK_ELEMENT:
         mapped = _map_element_args(action, elements, screenshot)
         if isinstance(mapped, ToolResult):
             return mapped
         result = mouse.click(mapped.x, mapped.y)
+        return _with_mapping(result.ok, result.message, result.execute_ms, mapped)
+    if action.action == ActionName.DOUBLE_CLICK_ELEMENT:
+        mapped = _map_element_args(action, elements, screenshot)
+        if isinstance(mapped, ToolResult):
+            return mapped
+        result = mouse.double_click(mapped.x, mapped.y)
         return _with_mapping(result.ok, result.message, result.execute_ms, mapped)
     if action.action == ActionName.MOVE_ELEMENT:
         mapped = _map_element_args(action, elements, screenshot)
@@ -175,7 +241,44 @@ class MappedPointer:
     execute_ms: int = 0
 
 
+@dataclass(frozen=True)
+class MappedDrag:
+    start: MappedPointer
+    end: MappedPointer
+
+
 def _map_pointer_args(action: PlannerAction, screenshot: ScreenshotResult | None) -> MappedPointer | ToolResult:
+    source_x = int(action.args["x"])
+    source_y = int(action.args["y"])
+    return _map_pointer_point(action.action.value, source_x, source_y, screenshot)
+
+
+def _map_drag_args(action: PlannerAction, screenshot: ScreenshotResult | None) -> MappedDrag | ToolResult:
+    start = _map_pointer_point(
+        "drag start",
+        int(action.args["start_x"]),
+        int(action.args["start_y"]),
+        screenshot,
+    )
+    if isinstance(start, ToolResult):
+        return start
+    end = _map_pointer_point(
+        "drag end",
+        int(action.args["end_x"]),
+        int(action.args["end_y"]),
+        screenshot,
+    )
+    if isinstance(end, ToolResult):
+        return end
+    return MappedDrag(start=start, end=end)
+
+
+def _map_optional_pointer_args(
+    action: PlannerAction,
+    screenshot: ScreenshotResult | None,
+) -> MappedPointer | ToolResult | None:
+    if "x" not in action.args and "y" not in action.args:
+        return None
     source_x = int(action.args["x"])
     source_y = int(action.args["y"])
     return _map_pointer_point(action.action.value, source_x, source_y, screenshot)
@@ -393,4 +496,19 @@ def _with_mapping(ok: bool, message: str, execute_ms: int, mapped: MappedPointer
         ok,
         f"{prefix}{message}; mapped screenshot ({mapped.source_x}, {mapped.source_y}) to screen ({mapped.x}, {mapped.y})",
         execute_ms,
+    )
+
+
+def _drag_mapping_message(mapped: MappedDrag) -> str:
+    if (
+        mapped.start.x == mapped.start.source_x
+        and mapped.start.y == mapped.start.source_y
+        and mapped.end.x == mapped.end.source_x
+        and mapped.end.y == mapped.end.source_y
+    ):
+        return "used screenshot coordinates directly"
+    return (
+        f"mapped screenshot start ({mapped.start.source_x}, {mapped.start.source_y}) "
+        f"to screen ({mapped.start.x}, {mapped.start.y}) and screenshot end "
+        f"({mapped.end.source_x}, {mapped.end.source_y}) to screen ({mapped.end.x}, {mapped.end.y})"
     )

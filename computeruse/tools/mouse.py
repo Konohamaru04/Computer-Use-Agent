@@ -23,7 +23,13 @@ class _MouseGui(Protocol):
 
     def rightClick(self, *, x: int, y: int) -> None: ...
 
-    def moveTo(self, *, x: int, y: int) -> None: ...
+    def moveTo(self, *, x: int, y: int, duration: float = 0) -> None: ...
+
+    def scroll(self, clicks: int, x: int | None = None, y: int | None = None) -> None: ...
+
+    def mouseDown(self, *, x: int | None = None, y: int | None = None, button: str = "left") -> None: ...
+
+    def mouseUp(self, *, x: int | None = None, y: int | None = None, button: str = "left") -> None: ...
 
 
 def _pyautogui() -> _MouseGui:
@@ -48,6 +54,32 @@ def right_click(x: int, y: int) -> MouseResult:
 
 def move(x: int, y: int) -> MouseResult:
     return _run_mouse(lambda gui: gui.moveTo(x=x, y=y), f"moved pointer to ({x}, {y})")
+
+
+def scroll(clicks: int, x: int | None = None, y: int | None = None) -> MouseResult:
+    target = f" at ({x}, {y})" if x is not None and y is not None else ""
+    direction = "up" if clicks > 0 else "down"
+    return _run_mouse(lambda gui: gui.scroll(clicks, x=x, y=y), f"scrolled {direction} {abs(clicks)} clicks{target}")
+
+
+def drag(start_x: int, start_y: int, end_x: int, end_y: int, duration_ms: int = 500) -> MouseResult:
+    duration_s = max(0, duration_ms) / 1000
+
+    def operation(gui: _MouseGui) -> None:
+        pressed = False
+        gui.moveTo(x=start_x, y=start_y)
+        gui.mouseDown(x=start_x, y=start_y, button="left")
+        pressed = True
+        try:
+            gui.moveTo(x=end_x, y=end_y, duration=duration_s)
+        finally:
+            if pressed:
+                gui.mouseUp(x=end_x, y=end_y, button="left")
+
+    return _run_mouse(
+        operation,
+        f"dragged from ({start_x}, {start_y}) to ({end_x}, {end_y}) over {duration_ms} ms",
+    )
 
 
 def _run_mouse(operation: Callable[[_MouseGui], Any], success_message: str) -> MouseResult:

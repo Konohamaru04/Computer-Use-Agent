@@ -13,7 +13,10 @@ class ActionName(str, Enum):
     DOUBLE_CLICK = "double_click"
     RIGHT_CLICK = "right_click"
     MOVE = "move"
+    SCROLL = "scroll"
+    DRAG = "drag"
     CLICK_ELEMENT = "click_element"
+    DOUBLE_CLICK_ELEMENT = "double_click_element"
     MOVE_ELEMENT = "move_element"
     CLICK_TARGET = "click_target"
     MOVE_TARGET = "move_target"
@@ -32,8 +35,17 @@ COORDINATE_ACTIONS = {
     ActionName.MOVE,
 }
 
+OPTIONAL_COORDINATE_ACTIONS = {
+    ActionName.SCROLL,
+}
+
+DRAG_ACTIONS = {
+    ActionName.DRAG,
+}
+
 ELEMENT_ACTIONS = {
     ActionName.CLICK_ELEMENT,
+    ActionName.DOUBLE_CLICK_ELEMENT,
     ActionName.MOVE_ELEMENT,
 }
 
@@ -57,6 +69,31 @@ class PlannerAction(BaseModel):
         if self.action in COORDINATE_ACTIONS:
             args["x"] = _non_negative_int(args, "x")
             args["y"] = _non_negative_int(args, "y")
+
+        if self.action in OPTIONAL_COORDINATE_ACTIONS:
+            has_x = args.get("x") is not None
+            has_y = args.get("y") is not None
+            if has_x != has_y:
+                raise ValueError(f"{self.action.value} requires both args.x and args.y when either is provided")
+            if has_x and has_y:
+                args["x"] = _non_negative_int(args, "x")
+                args["y"] = _non_negative_int(args, "y")
+            clicks = _int_value(args, "clicks")
+            if clicks == 0 or clicks < -100 or clicks > 100:
+                raise ValueError("scroll args.clicks must be between -100 and 100, excluding 0")
+            args["clicks"] = clicks
+
+        if self.action in DRAG_ACTIONS:
+            args["start_x"] = _non_negative_int(args, "start_x")
+            args["start_y"] = _non_negative_int(args, "start_y")
+            args["end_x"] = _non_negative_int(args, "end_x")
+            args["end_y"] = _non_negative_int(args, "end_y")
+            if args["start_x"] == args["end_x"] and args["start_y"] == args["end_y"]:
+                raise ValueError("drag start and end coordinates must be different")
+            duration_ms = _optional_int(args, "duration_ms", default=500)
+            if duration_ms < 0 or duration_ms > 5000:
+                raise ValueError("drag args.duration_ms must be between 0 and 5000")
+            args["duration_ms"] = duration_ms
 
         if self.action in ELEMENT_ACTIONS:
             element_id = args.get("element_id")
@@ -141,13 +178,32 @@ class PlannerAction(BaseModel):
 
 
 def _non_negative_int(args: dict[str, Any], key: str) -> int:
+    raw = args.get(key)
+    value = _int_value(args, key)
+    if isinstance(raw, (int, float)) and raw < 0:
+        raise ValueError(f"{key} must be non-negative")
+    if isinstance(raw, (int, float)) and 0 < raw < 1:
+        raise ValueError(f"{key} must be an absolute pixel coordinate, not a normalized fraction")
+    if value < 0:
+        raise ValueError(f"{key} must be non-negative")
+    return value
+
+
+def _int_value(args: dict[str, Any], key: str) -> int:
     value = args.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{key} must be a number")
-    if value < 0:
-        raise ValueError(f"{key} must be non-negative")
     if 0 < value < 1:
-        raise ValueError(f"{key} must be an absolute pixel coordinate, not a normalized fraction")
+        raise ValueError(f"{key} must be an integer-like value, not a normalized fraction")
+    return int(round(value))
+
+
+def _optional_int(args: dict[str, Any], key: str, *, default: int) -> int:
+    value = args.get(key, default)
+    if value is None:
+        return default
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{key} must be a number")
     return int(round(value))
 
 

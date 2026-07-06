@@ -35,7 +35,7 @@ Natural-language task
 - Local Ollama integration with known vision-capable models ranked first.
 - Strict one-action-at-a-time planner contract backed by Pydantic validation.
 - Screenshot capture with `mss`, plus planner overlays and optional UI Automation element collection.
-- Local mouse, keyboard, wait, screenshot, done, and fail action handlers.
+- Local mouse, keyboard, scroll, drag, wait, screenshot, done, and fail action handlers.
 - Pause, resume, stop, dry-run, and max-step controls.
 - Stdio MCP server for external agents that want safe observe -> execute -> verify computer-use tools.
 - Local-only runtime files for the active session, screenshots, timing logs, and run history.
@@ -221,7 +221,10 @@ click
 double_click
 right_click
 move
+scroll
+drag
 click_element
+double_click_element
 move_element
 click_target
 move_target
@@ -234,6 +237,8 @@ fail
 ```
 
 Coordinate actions use absolute screenshot-pixel coordinates from the latest capture. Element and target actions use the most recent UI Automation/perception data where available.
+
+Use `click_element` for normal controls: buttons, links, tabs, menus, text fields, checkboxes, browser controls, web results, and app navigation. Use `double_click_element` only for desktop-style items that conventionally require double-click to open: desktop shortcuts/icons, files, folders, Explorer rows, and open/save dialog file rows. Do not double-click web links, buttons, tabs, YouTube thumbnails, checkboxes, text fields, or menu commands. `scroll` accepts `clicks`; negative values scroll down and positive values scroll up. `drag` performs one atomic click-hold-drag-release with `start_x`, `start_y`, `end_x`, `end_y`, and optional `duration_ms`.
 
 ## Worker Protocol
 
