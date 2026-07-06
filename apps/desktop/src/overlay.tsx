@@ -10,8 +10,8 @@ import {
 import type { WidgetState } from "./lib/types";
 import "./overlay.css";
 
-const WIDGET_WIDTH = 360;
-const WIDGET_HEIGHT = 92;
+const WIDGET_WIDTH = 400;
+const WIDGET_HEIGHT = 188;
 const WIDGET_MARGIN = 12;
 
 const defaultState: WidgetState = {
@@ -20,6 +20,9 @@ const defaultState: WidgetState = {
   maxSteps: 50,
   action: null,
   message: "Idle",
+  reasoning: "",
+  reasoningPhase: null,
+  reasoningStreaming: false,
   screenshot: null,
   updatedAt: new Date().toISOString(),
 };
@@ -68,6 +71,8 @@ function OverlayWidget() {
     typeof state.action?.confidence === "number"
       ? `${Math.round(state.action.confidence * 100)}%`
       : "";
+  const reasoning = formatReasoning(state.reasoning || state.action?.thought || "");
+  const phaseLabel = state.reasoningPhase === "repair" ? "Repair stream" : "LLM reasoning";
 
   return (
     <div
@@ -86,6 +91,13 @@ function OverlayWidget() {
           {confidence ? ` - ${confidence}` : ""}
         </div>
         <div className="message">{state.message}</div>
+        <div className="reasoningHeader">
+          <span>{phaseLabel}</span>
+          {state.reasoningStreaming ? <span className="streamDot" aria-label="streaming" /> : null}
+        </div>
+        <div className="reasoningBox">
+          {reasoning || "Waiting for the next model response."}
+        </div>
       </div>
     </div>
   );
@@ -135,6 +147,14 @@ function readSavedPosition(): { x: number; y: number } | null {
   } catch {
     return null;
   }
+}
+
+function formatReasoning(value: string): string {
+  const trimmed = value.replace(/\s+/g, " ").trim();
+  if (trimmed.length <= 360) {
+    return trimmed;
+  }
+  return `...${trimmed.slice(-357)}`;
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

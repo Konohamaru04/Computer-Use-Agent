@@ -35,6 +35,9 @@ export default function App() {
     maxSteps: 50,
     action: null,
     message: "Idle",
+    reasoning: "",
+    reasoningPhase: null,
+    reasoningStreaming: false,
     screenshot: null,
     updatedAt: new Date().toISOString(),
   });
@@ -123,6 +126,9 @@ export default function App() {
         maxSteps: maxStepsRef.current,
         action: null,
         message: "Session started",
+        reasoning: "",
+        reasoningPhase: null,
+        reasoningStreaming: false,
       });
       broadcastCursorWidget({ active: true, status: "running", stepIndex: 0 });
       return;
@@ -159,12 +165,38 @@ export default function App() {
         stepIndex: event.step_index,
         maxSteps: maxStepsRef.current,
         message: `Starting step ${event.step_index}`,
+        reasoning: "",
+        reasoningPhase: null,
+        reasoningStreaming: false,
       });
       broadcastCursorWidget({
         active: true,
         status: "running",
         stepIndex: event.step_index,
       });
+      return;
+    }
+    if (event.type === "planner_stream") {
+      const text = event.text.trim();
+      broadcastWidget(
+        {
+          status: "running",
+          stepIndex: event.step_index,
+          maxSteps: maxStepsRef.current,
+          reasoning: text,
+          reasoningPhase: event.phase,
+          reasoningStreaming: !event.done,
+          message:
+            event.phase === "repair"
+              ? event.done
+                ? "Repaired action JSON"
+                : "Repairing action JSON"
+              : event.done
+                ? "Finished planning"
+                : "Planning next action",
+        },
+        { persist: false },
+      );
       return;
     }
     if (event.type === "model_action") {
@@ -175,6 +207,9 @@ export default function App() {
         stepIndex: index,
         maxSteps: maxStepsRef.current,
         action: event.action,
+        reasoning: event.action.thought || event.action.action,
+        reasoningPhase: null,
+        reasoningStreaming: false,
         message: event.action.thought || event.action.action,
       });
       const nextStep: TimelineStep = {
@@ -210,7 +245,7 @@ export default function App() {
     }
     if (event.type === "session_done") {
       setStatus("done");
-      broadcastWidget({ status: "done", message: event.summary });
+      broadcastWidget({ status: "done", message: event.summary, reasoningStreaming: false });
       broadcastCursorWidget({ active: false, status: "done" });
       setSteps((current) => updateLastResult(current, event.summary, true));
       refreshHistory();
@@ -219,7 +254,7 @@ export default function App() {
     if (event.type === "session_failed") {
       setStatus("failed");
       setError(event.reason);
-      broadcastWidget({ status: "failed", message: event.reason });
+      broadcastWidget({ status: "failed", message: event.reason, reasoningStreaming: false });
       broadcastCursorWidget({ active: false, status: "failed" });
       setSteps((current) => updateLastResult(current, event.reason, false));
       refreshHistory();
@@ -227,7 +262,7 @@ export default function App() {
     }
     if (event.type === "session_cancelled") {
       setStatus("cancelled");
-      broadcastWidget({ status: "cancelled", message: event.reason });
+      broadcastWidget({ status: "cancelled", message: event.reason, reasoningStreaming: false });
       broadcastCursorWidget({ active: false, status: "cancelled" });
       setSteps((current) => updateLastResult(current, event.reason, false));
       refreshHistory();
@@ -235,7 +270,7 @@ export default function App() {
     }
     if (event.type === "error") {
       setError(event.message);
-      broadcastWidget({ status: "failed", message: event.message });
+      broadcastWidget({ status: "failed", message: event.message, reasoningStreaming: false });
       broadcastCursorWidget({ active: false, status: "failed" });
     }
   }
@@ -252,17 +287,19 @@ export default function App() {
     send({ type: "get_history_session", session_id: sessionId });
   }
 
-  function broadcastWidget(patch: Partial<WidgetState>) {
+  function broadcastWidget(patch: Partial<WidgetState>, options: { persist?: boolean } = {}) {
     const next: WidgetState = {
       ...widgetStateRef.current,
       ...patch,
       updatedAt: new Date().toISOString(),
     };
     widgetStateRef.current = next;
-    try {
-      window.localStorage.setItem("computeruse.widget.state", JSON.stringify(next));
-    } catch {
-      // Local storage is only a best-effort fallback for the secondary window.
+    if (options.persist !== false) {
+      try {
+        window.localStorage.setItem("computeruse.widget.state", JSON.stringify(next));
+      } catch {
+        // Local storage is only a best-effort fallback for the secondary window.
+      }
     }
     emitTo("widget", "computeruse-status", next).catch(() => undefined);
   }
@@ -291,6 +328,9 @@ export default function App() {
       maxSteps: maxStepsRef.current,
       action: null,
       message: "Starting",
+      reasoning: "",
+      reasoningPhase: null,
+      reasoningStreaming: false,
     });
     broadcastCursorWidget({
       active: true,

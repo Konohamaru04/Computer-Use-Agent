@@ -106,6 +106,15 @@ export interface TimingEvent {
   gpu_memory_total_mb?: number;
 }
 
+export interface PlannerStreamEvent {
+  type: "planner_stream";
+  step_index: number;
+  phase: "plan" | "repair";
+  delta: string;
+  text: string;
+  done: boolean;
+}
+
 export type WorkerCommand =
   | { type: "list_models" }
   | {
@@ -128,6 +137,7 @@ export type WorkerEvent =
   | { type: "session_started"; session_id: string }
   | ScreenshotEvent
   | { type: "step_started"; step_index: number }
+  | PlannerStreamEvent
   | { type: "model_action"; action: PlannerAction }
   | { type: "tool_result"; ok: boolean; message: string; recoverable?: boolean }
   | TimingEvent
@@ -145,6 +155,9 @@ export interface WidgetState {
   maxSteps: number;
   action?: PlannerAction | null;
   message: string;
+  reasoning?: string;
+  reasoningPhase?: "plan" | "repair" | null;
+  reasoningStreaming?: boolean;
   screenshot?: {
     width: number;
     height: number;

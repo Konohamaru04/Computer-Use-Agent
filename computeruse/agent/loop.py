@@ -114,6 +114,7 @@ class AgentRunner:
                     prompt=prompt,
                     screenshot=observe,
                     elements=perception.elements,
+                    step_index=step_index,
                 )
                 action_payload = action.model_dump(mode="json")
                 await self._emit({"type": "model_action", "action": action_payload})
@@ -294,9 +295,15 @@ class AgentRunner:
         prompt: str,
         screenshot: ScreenshotResult,
         elements: list[Any],
+        step_index: int,
     ) -> tuple[PlannerAction, dict[str, int]]:
         planner_screenshot = create_planner_screenshot(screenshot, elements=elements)
-        response = await self.ollama.plan_action(model, prompt, planner_screenshot.path)
+        response = await self.ollama.plan_action(
+            model,
+            prompt,
+            planner_screenshot.path,
+            stream_callback=self._planner_stream_callback(step_index=step_index, phase="plan"),
+        )
         timing = {
             "encode_ms": response.encode_ms,
             "grid_ms": planner_screenshot.grid_ms,
@@ -314,6 +321,7 @@ class AgentRunner:
                 prompt,
                 planner_screenshot.path,
                 repair_context=repair_context,
+                stream_callback=self._planner_stream_callback(step_index=step_index, phase="repair"),
             )
             timing = {
                 "encode_ms": response.encode_ms + repaired.encode_ms,
@@ -321,6 +329,21 @@ class AgentRunner:
                 "ollama_ms": response.ollama_ms + repaired.ollama_ms,
             }
             return parse_planner_action(repaired.raw), timing
+
+    def _planner_stream_callback(self, *, step_index: int, phase: str) -> EventEmitter:
+        async def emit_stream(chunk: dict[str, Any]) -> None:
+            await self._emit(
+                {
+                    "type": "planner_stream",
+                    "step_index": step_index,
+                    "phase": phase,
+                    "delta": chunk.get("delta", ""),
+                    "text": chunk.get("text", ""),
+                    "done": bool(chunk.get("done")),
+                }
+            )
+
+        return emit_stream
 
     async def _emit_screenshot(self, screenshot: ScreenshotResult) -> None:
         await self._emit(
